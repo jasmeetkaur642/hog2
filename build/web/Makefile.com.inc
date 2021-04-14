@@ -11,18 +11,19 @@ COMMON_CXXFLAGS += -Wall -std=c++11 # -stdlib=libc++
 #COMMON_CXXFLAGS += -ansi -pedantic
 
 CC = emcc
-COMMON_CFLAGS += -Wall 
+COMMON_CFLAGS += -Wall
 
 LN = $(CXX)
 #COMMON_LNFLAGS += -stdlib=libc++
 
 AR = emar
 
-COMMON_CXXFLAGS += -I$(ROOT)/gui/ -I$(ROOT)/gui/GL/ -DNO_OPENGL
+COMMON_CXXFLAGS += -I$(ROOT)/gui/ -I$(ROOT)/gui/GL/ -DNO_OPENGL 
+
 
 # if Linux need some other pthread call 
 ifeq ($(findstring "Linux", "$(shell uname -s)"), "Linux")
-COMMON_LNFLAGS += -Lapps/libs -Ldemos/libs -L/usr/X11R6/lib64 -L/usr/X11R6/lib -pthread
+COMMON_LNFLAGS += -Lapps/libs -Ldemos/libs -L/usr/X11R6/lib64 -L/usr/X11R6/lib -lpthread
 else
 COMMON_LNFLAGS += -Lapps/libs -Ldemos/libs -L/usr/X11R6/lib64 -L/usr/X11R6/lib -lpthread
 endif
