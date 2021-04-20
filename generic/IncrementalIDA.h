@@ -92,6 +92,7 @@ template <class state, class action>
 bool IncrementalIDA<state, action>::InitializeSearch(SearchEnvironment<state, action> *e, state from, state to, Heuristic<state> *h,
 													 std::vector<state> &thePath)
 {
+	printf("initialize search here\n");
 	Reset();
 	if (from==to)
 	{
@@ -116,10 +117,10 @@ void IncrementalIDA<state, action>::SetupIteration(double cost)
 	search.back().status = kGoingDown;
 	search.back().pathCost = 0;
 	previousBound = bound;
-	bound = cost;//nextBound;
+	bound = 12.04;//cost;//nextBound;
 	nextBound = -1;
 	path.clear();
-//	printf("Starting iteration bound %1.1f\n", bound);
+	printf("Starting iteration bound %1.1f\n", bound);
 	newNodesLastIteration = newNodeCount;
 	newNodeCount = 0;
 }
@@ -127,6 +128,13 @@ void IncrementalIDA<state, action>::SetupIteration(double cost)
 template <class state, class action>
 bool IncrementalIDA<state, action>::StepIteration()
 {
+	printf("stepIteration is called\n");
+	if(search.back().status == kGoingDown){
+		printf("status is going down\n");
+	}
+	else if(search.back().status == kGoingAcross){
+		printf("status is going across\n");
+	}
 	if (env->GoalTest(search.back().currState, goal) && flesseq(search.back().pathCost, bound))
 	{
 		printf("Done!");
@@ -139,10 +147,11 @@ bool IncrementalIDA<state, action>::StepIteration()
 	if (search.back().status == kGoingDown)
 	{
 		double f = search.back().pathCost+h->HCost(search.back().currState, goal);
+		printf("f being used %1.1f\n",f);
 		// exceeded path cost bound
 		if (fgreater(f, bound))
 		{
-//			printf("Above bound: %f/%f\n", bound, f);
+			printf("Above bound: %f/%f\n", bound, f);
 			if (nextBound == -1)
 				nextBound = f;
 			else if (fless(f, nextBound))
@@ -156,10 +165,11 @@ bool IncrementalIDA<state, action>::StepIteration()
 			newNodeCount++;
 		
 		// continue search
-//		printf("Generating next set of successors\n");
+		printf("Generating next set of successors\n");
 		search.back().status = kGoingAcross;
 		env->GetSuccessors(search.back().currState, search.back().succ);
 		nodesExpanded++;
+		printf("the succ size for the current state is %d\n",search.back().succ.size());
 		for (int x = 0; x < search.back().succ.size(); x++)
 		{
 			if (search.size() > 1 && search.back().succ[x] == search[search.size()-2].currState)
@@ -179,7 +189,7 @@ bool IncrementalIDA<state, action>::StepIteration()
 		// no more succ to go down - go up
 		if (search.back().succ.size() == 0)
 		{
-//			printf("Out of successors\n");
+			printf("Out of successors\n");
 			search.pop_back();
 			return false;
 		}
@@ -206,11 +216,12 @@ bool IncrementalIDA<state, action>::DoSingleSearchStep(std::vector<state> &thePa
 	// starting new iteration
 	if (IterationComplete())
 	{
+		printf("iteration is complete, starting a new iteration\n");
 		SetupIteration(nextBound);
 		// pause between iterations
 		return false;
 	}
-
+    printf("moving to the next step of the same iteration\n");
 	return StepIteration();
 }
 

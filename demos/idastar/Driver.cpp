@@ -17,6 +17,7 @@
 #include "MNPuzzle.h"
 #include "IncrementalIDA.h"
 #include "IncrementalBTS.h"
+#include "IncrementalBFS.h"
 #include "TemplateAStar.h"
 #include "PermutationPDB.h"
 #include "LexPermutationPDB.h"
@@ -24,11 +25,11 @@
 
 IncrementalIDA<graphState, graphMove> ida;
 IncrementalBTS<graphState, graphMove> ibex;
-bool useIDA = true;
+IncrementalBFS<graphState, graphMove> bfs;
+int useIDA = 2;
 bool layoutFullTree = false;
 TemplateAStar<graphState, graphMove, GraphEnvironment> astar;
 int nodesInTree = 0;
-
 enum mode {
 	kAddNodes,
 	kAddEdges,
@@ -123,8 +124,11 @@ GraphDistHeuristic h;
 
 int main(int argc, char* argv[])
 {
+	printf("main line 1\n");
 	InstallHandlers();
+	printf("main line 2\n");
 	RunHOGGUI(argc, argv, 1600, 800);
+	printf("main line 3\n");
 	return 0;
 }
 
@@ -159,7 +163,6 @@ void InstallHandlers()
 	//InstallKeyboardHandler(DefaultGraph, "Default", "Build Deafult Graph", kAnyModifier, 'a', 'd');
 	
 	//InstallCommandLineHandler(MyCLHandler, "-map", "-map filename", "Selects the default map to be loaded.");
-	
 	InstallWindowHandler(MyWindowHandler);
 	
 	InstallMouseClickHandler(MyClickHandler);
@@ -221,8 +224,10 @@ void MyWindowHandler(unsigned long windowID, tWindowEventType eType)
 		
 		//mnp.SetWeighted(kUnitPlusFrac);
 		BuildGraphFromPuzzle();
+		printf("case is two\n");
 		ida.InitializeSearch(ge, from, 0, &h, path);
 		ibex.InitializeSearch(ge, from, 0, &h, path);
+		bfs.InitializeSearch(ge,from,0,&h,path);
 		RedrawTextDisplay();
 		//MyDisplayHandler(windowID, kNoModifier, 'o');
 		ge->SetNodeScale(20);
@@ -257,10 +262,12 @@ void DrawPDB(Graphics::Display &display, PermutationPDB<MNPuzzleState<3, 2>, sli
 		}
 		else // no animation in progres
 		{
-			if (useIDA)
+			if (useIDA == 0)
 				mnp.GetStateFromHash(t1, ida.GetCurrentState());
-			else
+			else if(useIDA == 1)
 				mnp.GetStateFromHash(t1, ibex.GetCurrentState());
+			else
+				mnp.GetStateFromHash(t1, bfs.GetCurrentState());
 			uint64_t h1 = pdb->GetPDBHash(t1);
 			pdb->GetStateFromPDBHash(h1, t1);
 			mnp.Draw(display, t1);
@@ -306,11 +313,34 @@ void DrawEdgesInIteration(Graphics::Display &display)
 			double tof = g->GetNode(e->getTo())->GetLabelF(GraphSearchConstants::kTemporaryLabel);
 			tof += h.HCost(e->getTo(), 0);
 			double m = std::max(fromf, tof);
-			if (flesseq(m, useIDA?ida.GetCurrentFLimit():ibex.GetCurrentFLimit()))
+			if(useIDA == 0){
+				if (flesseq(m, ida.GetCurrentFLimit()))
+				{
+					ge->SetColor(Colors::lighterblue);
+					ge->DrawLine(display, e->getFrom(), e->getTo(), 40);
+				}
+			}
+			else if(useIDA == 1){
+				if (flesseq(m, ibex.GetCurrentFLimit()))
+				{
+					ge->SetColor(Colors::lighterblue);
+					ge->DrawLine(display, e->getFrom(), e->getTo(), 40);
+				}
+			}
+			else{
+				if (flesseq(m, bfs.GetCurrentFLimit()))
+				{
+					ge->SetColor(Colors::lighterblue);
+					ge->DrawLine(display, e->getFrom(), e->getTo(), 40);
+				}
+
+			}
+		/*	if (flesseq(m, useIDA?ida.GetCurrentFLimit():ibex.GetCurrentFLimit()))
 			{
 				ge->SetColor(Colors::lighterblue);
 				ge->DrawLine(display, e->getFrom(), e->getTo(), 40);
 			}
+		*/
 			//			else if (flesseq(m, ida.GetNextFLimit()))
 			//			{
 			//				ge->SetColor(Colors::lighterred);
@@ -415,10 +445,12 @@ void MyFrameHandler(unsigned long windowID, unsigned int viewport, void *)
 		}
 		
 		ge->SetColor(1.0, 0, 0);
-		if (useIDA)
+		if (useIDA == 0)
 			ida.Draw(display);
-		else
+		else if(useIDA == 1)
 			ibex.Draw(display);
+		else
+			bfs.Draw(display);
 	}
 	
 	if (viewport == kTextView)
@@ -445,9 +477,22 @@ void MyFrameHandler(unsigned long windowID, unsigned int viewport, void *)
 			}
 			else // no animation in progres
 			{
-				auto n = useIDA?ida.GetCurrentState():ibex.GetCurrentState();
-				mnp.GetStateFromHash(t1, n);
-				mnp.Draw(display, t1);
+				//auto n = useIDA?ida.GetCurrentState():ibex.GetCurrentState();
+				if(useIDA == 0){
+					auto n = ida.GetCurrentState();
+					mnp.GetStateFromHash(t1, n);
+				    mnp.Draw(display, t1);
+				}
+				else if(useIDA == 1){
+					auto n = ibex.GetCurrentState();
+					mnp.GetStateFromHash(t1, n);
+				    mnp.Draw(display, t1);
+				}
+				else{
+					auto n = bfs.GetCurrentState();
+					mnp.GetStateFromHash(t1, n);
+				    mnp.Draw(display, t1);
+				}
 			}
 		}
 	}
@@ -502,7 +547,7 @@ void RedrawTextDisplay()
 	te.Clear();
 	std::string s;
 	
-	if (useIDA)
+	if (useIDA == 0)
 	{
 		s = "IDA* Curr f-bound: ";
 		s += to_string_with_precision(ida.GetCurrentFLimit(), displayPrecision);
@@ -536,7 +581,7 @@ void RedrawTextDisplay()
 		s += std::to_string(ida.GetNewNodesLastIteration());
 		te.AddLine(s.c_str());
 	}
-	else {
+	else if(useIDA == 1){
 		double l, u;
 		uint64_t small, large;
 		s = "IBEX/BTS - "+ibex.stage;
@@ -580,6 +625,39 @@ void RedrawTextDisplay()
 		}
 		te.AddLine(s.c_str());
 	}
+	else{
+		s = "BFHS Curr f-bound: ";
+		s += to_string_with_precision(bfs.GetCurrentFLimit(), displayPrecision);
+		//te.AddLine(s.c_str());
+		s += " next f: ";
+		s += to_string_with_precision(bfs.GetNextFLimit(), displayPrecision);
+		te.AddLine(s.c_str());
+		s = "Curr state f-cost: ";
+		if (currentPath.size() > 0)
+		{
+			s += to_string_with_precision((h.HCost(currentPath.back(), 0)+ge->GetPathLength(currentPath)), displayPrecision);
+			s += " (g: "+to_string_with_precision(ge->GetPathLength(currentPath), displayPrecision);
+			s += " h: "+to_string_with_precision(h.HCost(currentPath.back(), 0), displayPrecision)+")";
+		}
+		else if (hit != -1)
+		{
+			s += to_string_with_precision((h.HCost(hit, 0))+g->GetNode(hit)->GetLabelF(GraphSearchConstants::kTemporaryLabel), displayPrecision);
+			s += " (g: ";
+			s += to_string_with_precision(g->GetNode(hit)->GetLabelF(GraphSearchConstants::kTemporaryLabel), displayPrecision);
+			s += " h: "+to_string_with_precision(h.HCost(hit, 0), displayPrecision)+")";
+		}
+		else {
+			s += "-";
+		}
+		te.AddLine(s.c_str());
+		te.AddLine("");
+		
+		s = "Nodes exp: ";
+		s += std::to_string(bfs.GetNodesExpanded());
+		s += " New last iter: ";
+		s += std::to_string(bfs.GetNewNodesLastIteration());
+		te.AddLine(s.c_str());
+	}
 
 	s = "Heuristic: ";
 	if (whichHeuristic&1)
@@ -596,6 +674,7 @@ void RedrawTextDisplay()
 
 void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
 {
+	printf("MyDisplayHandler \n");
 	switch (key)
 	{
 		case 'f':
@@ -678,8 +757,10 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
 			break;
 		case '|':
 		{
+			printf("case is 1\n");
 			ida.InitializeSearch(ge, from, 0, &h, path);
 			ibex.InitializeSearch(ge, from, 0, &h, path);
+			bfs.InitializeSearch(ge, from, 0, &h, path);
 			RedrawTextDisplay();
 			
 			BuildGraphFromPuzzle();
@@ -787,18 +868,46 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
 			break;
 		case 'o':
 		{
-			if (useIDA)
+			if (useIDA == 0){
 				ida.GetCurrentPath(lastPath);
-			else
+				for (auto &i : lastPath){
+					printf("%ld :",i);
+				}
+				printf("\n");
+			}
+			else if(useIDA == 1)
 				ibex.GetCurrentPath(lastPath);
+			else
+				bfs.GetCurrentPath(lastPath);
 			
-			bool done = useIDA?ida.DoSingleSearchStep(path):ibex.DoSingleSearchStep(path);
+		//	bool done = useIDA?ida.DoSingleSearchStep(path):ibex.DoSingleSearchStep(path);
+		    bool done;
+		    if(useIDA == 0){
+				done = ida.DoSingleSearchStep(path);
+			}
+			else if(useIDA == 1){
+				done = ibex.DoSingleSearchStep(path);
+			}
+			else{
+				done = bfs.DoSingleSearchStep(path);
+			}
 			if (done && running)
 				running = false;
-			if (useIDA)
+			if (useIDA == 0){
 				ida.GetCurrentPath(currentPath);
-			else
+				for (auto &i : lastPath){
+					printf("%ld :",i);
+				}
+				printf("\n");
+			}
+			else if(useIDA == 1)
 				ibex.GetCurrentPath(currentPath);
+			else
+			{
+				printf("getting current path for bfs\n");
+				bfs.GetCurrentPath(currentPath);
+			}
+
 			timer = 0;
 			RedrawTextDisplay();
 		}
