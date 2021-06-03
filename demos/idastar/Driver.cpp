@@ -17,6 +17,7 @@
 #include "MNPuzzle.h"
 #include "IncrementalIDA.h"
 #include "IncrementalBTS.h"
+#include "IncrementalBGS.h"
 #include "TemplateAStar.h"
 #include "PermutationPDB.h"
 #include "LexPermutationPDB.h"
@@ -24,7 +25,8 @@
 
 IncrementalIDA<graphState, graphMove> ida;
 IncrementalBTS<graphState, graphMove> ibex;
-bool useIDA = true;
+IncrementalBGS<graphState, graphMove> bgs;
+int useIDA = 2;
 bool layoutFullTree = false;
 TemplateAStar<graphState, graphMove, GraphEnvironment> astar;
 int nodesInTree = 0;
@@ -257,10 +259,12 @@ void DrawPDB(Graphics::Display &display, PermutationPDB<MNPuzzleState<3, 2>, sli
 		}
 		else // no animation in progres
 		{
-			if (useIDA)
+			if (useIDA == 0)
 				mnp.GetStateFromHash(t1, ida.GetCurrentState());
-			else
+			else if(useIDA == 1)
 				mnp.GetStateFromHash(t1, ibex.GetCurrentState());
+			else
+				mnp.GetStateFromHash(t1, bgs.GetCurrentState());
 			uint64_t h1 = pdb->GetPDBHash(t1);
 			pdb->GetStateFromPDBHash(h1, t1);
 			mnp.Draw(display, t1);
@@ -311,6 +315,30 @@ void DrawEdgesInIteration(Graphics::Display &display)
 				ge->SetColor(Colors::lighterblue);
 				ge->DrawLine(display, e->getFrom(), e->getTo(), 40);
 			}
+			if(useIDA == 0){
+				if (flesseq(m,ida.GetCurrentFLimit()))
+			{
+				ge->SetColor(Colors::lighterblue);
+				ge->DrawLine(display, e->getFrom(), e->getTo(), 40);
+			}
+			}
+			else if(useIDA == 1){
+				if (flesseq(m, ibex.GetCurrentFLimit()))
+			{
+				ge->SetColor(Colors::lighterblue);
+				ge->DrawLine(display, e->getFrom(), e->getTo(), 40);
+			}
+			}
+			else{
+				if (flesseq(m, bgs.GetCurrentFLimit()))
+			{
+				ge->SetColor(Colors::lighterblue);
+				ge->DrawLine(display, e->getFrom(), e->getTo(), 40);
+			}
+			}
+
+
+
 			//			else if (flesseq(m, ida.GetNextFLimit()))
 			//			{
 			//				ge->SetColor(Colors::lighterred);
@@ -415,10 +443,12 @@ void MyFrameHandler(unsigned long windowID, unsigned int viewport, void *)
 		}
 		
 		ge->SetColor(1.0, 0, 0);
-		if (useIDA)
+		if (useIDA == 0)
 			ida.Draw(display);
-		else
+		else if(useIDA == 1)
 			ibex.Draw(display);
+		else
+			bgs.Draw(display);
 	}
 	
 	if (viewport == kTextView)
@@ -445,9 +475,23 @@ void MyFrameHandler(unsigned long windowID, unsigned int viewport, void *)
 			}
 			else // no animation in progres
 			{
-				auto n = useIDA?ida.GetCurrentState():ibex.GetCurrentState();
-				mnp.GetStateFromHash(t1, n);
-				mnp.Draw(display, t1);
+				
+				if(useIDA == 0){
+					auto n = ida.GetCurrentState();
+					mnp.GetStateFromHash(t1, n);
+					mnp.Draw(display, t1);
+				}
+				else if(useIDA == 1){
+					auto n = ibex.GetCurrentState();
+					mnp.GetStateFromHash(t1, n);
+					mnp.Draw(display, t1);
+				}
+				else{
+					auto n = bgs.GetCurrentState();
+					mnp.GetStateFromHash(t1, n);
+					mnp.Draw(display, t1);
+				}
+				
 			}
 		}
 	}
@@ -502,7 +546,7 @@ void RedrawTextDisplay()
 	te.Clear();
 	std::string s;
 	
-	if (useIDA)
+	if (useIDA==0)
 	{
 		s = "IDA* Curr f-bound: ";
 		s += to_string_with_precision(ida.GetCurrentFLimit(), displayPrecision);
@@ -536,7 +580,7 @@ void RedrawTextDisplay()
 		s += std::to_string(ida.GetNewNodesLastIteration());
 		te.AddLine(s.c_str());
 	}
-	else {
+	else if(useIDA == 1) {
 		double l, u;
 		uint64_t small, large;
 		s = "IBEX/BTS - "+ibex.stage;
@@ -558,6 +602,50 @@ void RedrawTextDisplay()
 		s += std::to_string(ibex.GetIterationNodesExpanded());
 		s += " (iter) ";
 		s += std::to_string(ibex.GetNodesExpanded());
+		s += " (tot)";
+		te.AddLine(s.c_str());
+
+		s = "Curr f: ";
+		if (currentPath.size() > 0)
+		{
+			s += to_string_with_precision((h.HCost(currentPath.back(), 0)+ge->GetPathLength(currentPath)), displayPrecision);
+			s += " (g: "+to_string_with_precision(ge->GetPathLength(currentPath), displayPrecision);
+			s += " h: "+to_string_with_precision(h.HCost(currentPath.back(), 0), displayPrecision)+")";
+		}
+		else if (hit != -1)
+		{
+			s += to_string_with_precision((h.HCost(hit, 0))+g->GetNode(hit)->GetLabelF(GraphSearchConstants::kTemporaryLabel), displayPrecision);
+			s += " (g: ";
+			s += to_string_with_precision(g->GetNode(hit)->GetLabelF(GraphSearchConstants::kTemporaryLabel), displayPrecision);
+			s += " h: "+to_string_with_precision(h.HCost(hit, 0), displayPrecision)+")";
+		}
+		else {
+			s += "-";
+		}
+		te.AddLine(s.c_str());
+	}
+	else{
+		double l, u;
+		uint64_t small, large;
+		s = "bgs - "+bgs.stage;
+		te.AddLine(s.c_str());
+		bgs.GetGlobalCostInterval(l, u);
+		s = "f: ["+((l!=DBL_MAX)?to_string_with_precision(l, 2):"∞");
+		u = bgs.GetCurrentFLimit();
+		s += ","+((u!=DBL_MAX)?to_string_with_precision(u, 2):"∞");//+"]";
+		bgs.GetGlobalCostInterval(l, u);
+		s += ","+((u!=DBL_MAX)?to_string_with_precision(u, 2):"∞")+")";
+		te.AddLine(s.c_str());
+
+//		te.AddLine(s.c_str());
+
+		bgs.GetNodeInterval(small, large);
+		s = "node window ["+(std::to_string(small))+", "+((large!=bgs.infiniteWorkBound)?std::to_string(large):"∞")+"]";
+		te.AddLine(s.c_str());
+		s = "Nodes exp: ";
+		s += std::to_string(bgs.GetIterationNodesExpanded());
+		s += " (iter) ";
+		s += std::to_string(bgs.GetNodesExpanded());
 		s += " (tot)";
 		te.AddLine(s.c_str());
 
@@ -787,18 +875,31 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
 			break;
 		case 'o':
 		{
-			if (useIDA)
+			if (useIDA == 0)
 				ida.GetCurrentPath(lastPath);
-			else
+			else if(useIDA == 1)
 				ibex.GetCurrentPath(lastPath);
+			else
+				bgs.GetCurrentPath(lastPath);
 			
-			bool done = useIDA?ida.DoSingleSearchStep(path):ibex.DoSingleSearchStep(path);
+			bool done;
+			if(useIDA == 0){
+				done = ida.DoSingleSearchStep(path);
+			}
+			else if(useIDA == 1){
+				done = ibex.DoSingleSearchStep(path);
+			}
+			else{
+				done = bgs.DoSingleSearchStep(path);
+			}
 			if (done && running)
 				running = false;
-			if (useIDA)
+			if (useIDA == 0)
 				ida.GetCurrentPath(currentPath);
-			else
+			else if(useIDA == 1)
 				ibex.GetCurrentPath(currentPath);
+			else	
+				bgs.GetCurrentPath(currentPath);
 			timer = 0;
 			RedrawTextDisplay();
 		}

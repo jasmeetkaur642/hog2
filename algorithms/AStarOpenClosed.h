@@ -257,7 +257,7 @@ dataLocation AStarOpenClosed<state, CmpKey, dataStructure>::Lookup(uint64_t hash
 template<typename state, typename CmpKey, class dataStructure>
 uint64_t AStarOpenClosed<state, CmpKey, dataStructure>::Peek() const
 {
-	assert(OpenSize() != 0);
+	//assert(OpenSize() != 0);
 	
 	return theHeap[0];
 }

@@ -37,7 +37,7 @@ public:
 		history.clear(); ResetNodeCount(); previousBound = 0; }
 	void OpenGLDraw();
 	void Draw(Graphics::Display &display) const;
-	state GetCurrentState() const
+	state GetCurrentState() 
 	{
 		if (q.size() > 0)
 			return q.Lookup(q.Peek()).data;
