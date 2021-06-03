@@ -225,6 +225,7 @@ void MyWindowHandler(unsigned long windowID, tWindowEventType eType)
 		BuildGraphFromPuzzle();
 		ida.InitializeSearch(ge, from, 0, &h, path);
 		ibex.InitializeSearch(ge, from, 0, &h, path);
+     	bgs.InitializeSearch(ge, from, 0, &h, path);
 		RedrawTextDisplay();
 		//MyDisplayHandler(windowID, kNoModifier, 'o');
 		ge->SetNodeScale(20);
@@ -763,6 +764,7 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
 		{
 			ida.InitializeSearch(ge, from, 0, &h, path);
 			ibex.InitializeSearch(ge, from, 0, &h, path);
+			bgs.InitializeSearch(ge, from, 0, &h, path);
 			RedrawTextDisplay();
 			
 			BuildGraphFromPuzzle();
