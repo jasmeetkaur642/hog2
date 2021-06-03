@@ -310,11 +310,6 @@ void DrawEdgesInIteration(Graphics::Display &display)
 			double tof = g->GetNode(e->getTo())->GetLabelF(GraphSearchConstants::kTemporaryLabel);
 			tof += h.HCost(e->getTo(), 0);
 			double m = std::max(fromf, tof);
-			if (flesseq(m, useIDA?ida.GetCurrentFLimit():ibex.GetCurrentFLimit()))
-			{
-				ge->SetColor(Colors::lighterblue);
-				ge->DrawLine(display, e->getFrom(), e->getTo(), 40);
-			}
 			if(useIDA == 0){
 				if (flesseq(m,ida.GetCurrentFLimit()))
 			{
