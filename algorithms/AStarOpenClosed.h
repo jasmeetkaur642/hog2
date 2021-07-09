@@ -89,7 +89,8 @@ public:
 	uint64_t Close(uint64_t objKey);
 	uint64_t Close();
 	void Reopen(uint64_t objKey);
-
+	std::vector<uint64_t> ClosedNodesTillNow();
+	bool CheckTable(uint64_t hash);
 	void CloseAllOnOpen()
 	{
 		for (int x = 0; x < theHeap.size(); x++)
@@ -169,6 +170,7 @@ uint64_t AStarOpenClosed<state, CmpKey, dataStructure>::AddOpenNode(const state 
 	// should do lookup here...
 	if (table.find(hash) != table.end())
 	{
+		printf("alreday in the table\n");
 		//return -1; // TODO: find correct id and return
 		assert(false);
 	}
@@ -243,7 +245,7 @@ dataLocation AStarOpenClosed<state, CmpKey, dataStructure>::Lookup(uint64_t hash
 	typename IndexTable::const_iterator it;
 	it = table.find(hashKey);
 	if (it != table.end())
-	{
+	{  
 		objKey = (*it).second;
 		return elements[objKey].where;
 	}
@@ -365,4 +367,25 @@ void AStarOpenClosed<state, CmpKey, dataStructure>::HeapifyDown(unsigned int ind
 	}
 }
 
+template<typename state, typename CmpKey, class dataStructure>
+std::vector<uint64_t> AStarOpenClosed<state, CmpKey, dataStructure>::ClosedNodesTillNow()
+{
+	std::vector<uint64_t> v;
+	for(int i = 0; i < elements.size();i++){
+		if(elements[i].where == kClosedList){
+			v.push_back(i);
+		}
+	}
+	return v;
+}
+template<typename state, typename CmpKey, class dataStructure>
+bool AStarOpenClosed<state, CmpKey, dataStructure>::CheckTable(uint64_t hash)
+{
+	if(table.find(hash) == table.end()){
+		return false;
+	}
+	else{
+		return true;
+	}
+}
 #endif

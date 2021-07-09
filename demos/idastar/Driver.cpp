@@ -158,7 +158,7 @@ void InstallHandlers()
 	InstallKeyboardHandler(MyDisplayHandler, "IBEX/IDA", "Toggle Unit IDA*/IBEX", kAnyModifier, 'i');
 	InstallKeyboardHandler(MyDisplayHandler, "Tree", "Layout full tree", kAnyModifier, 'f');
 	//InstallKeyboardHandler(MyDisplayHandler, "Weight", "Toggle Dijkstra & A*", kAnyModifier, 'w');
-	//InstallKeyboardHandler(DefaultGraph, "Default", "Build Deafult Graph", kAnyModifier, 'a', 'd');
+	//InstallKeyboardHandler(DefaultGraph, " Default", "Build Deafult Graph", kAnyModifier, 'a', 'd');
 	
 	//InstallCommandLineHandler(MyCLHandler, "-map", "-map filename", "Selects the default map to be loaded.");
 	
@@ -764,7 +764,7 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
 		{
 			ida.InitializeSearch(ge, from, 0, &h, path);
 			ibex.InitializeSearch(ge, from, 0, &h, path);
-			bgs.InitializeSearch(ge, from, 0, &h, path);
+			bgs.InitializeSearch(ge, from, 0, &h, path); 
 			RedrawTextDisplay();
 			
 			BuildGraphFromPuzzle();
@@ -865,7 +865,7 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
 		case 'p':
 			running = !running;
 			if (running)
-				submitTextToBuffer("Running automatically");
+				submitTextToBuffer("Running  automatically");
 			else
 				submitTextToBuffer("");
 			
@@ -887,7 +887,10 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
 				done = ibex.DoSingleSearchStep(path);
 			}
 			else{
-				done = bgs.DoSingleSearchStep(path);
+				done = bgs.DoSingleSearchStep();
+			}
+			if(done){
+				printf("Solution Found\n");
 			}
 			if (done && running)
 				running = false;
