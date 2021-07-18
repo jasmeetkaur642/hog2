@@ -13,6 +13,7 @@
 #include "Heuristic.h"
 #include "AStarOpenClosed.h"
 bool mode = 0;
+int flag = 0;
 template <class state, class action>
 class IncrementalBGS {
 public:
@@ -56,7 +57,7 @@ public:
 	const uint64_t c1 = 2;
 	const uint64_t c2 = 8;
 	const uint64_t gamma = 2;
-	const uint64_t k = 1;
+	const uint64_t k = 2;
 	const int infiniteWorkBound = -1;
 	void GetGlobalCostInterval(double &lower, double &upper)
 	{ lower = data.solutionInterval.lowerBound; upper = data.solutionInterval.upperBound; }
@@ -233,7 +234,7 @@ void IncrementalBGS<state, action>::SetupIteration(double cost)
 	double f_next = -1;
 	if(q_f.OpenSize() == 0){
 		printf("Added the start state with hash value %llu\n",env->GetStateHash(start));
-		q.AddOpenNode(start,719, 0.0, 0.0);
+		q.AddOpenNode(start,1078, 0.0, 0.0);
 	}
 	else{
 		printf("Populating the queue from q_f\n");
@@ -526,7 +527,7 @@ bool IncrementalBGS<state, action>::DoSingleSearchStep()
 				}
 				else{
 					printf("Iteration is over for %1.5f\n",f_values[f_values.size()-1]);
-					if(MInodesexpanded >= (c1-1)*nodeLB){
+					if(MInodesexpanded >= (c1)*nodeLB){
 						fc_next = f_values[f_values.size()-1];
 						printf("Main Iteration is over for %1.5f\n",f_values[f_values.size()-1]);
 						return false;
@@ -539,6 +540,9 @@ bool IncrementalBGS<state, action>::DoSingleSearchStep()
 				}
 			}
 			else{
+				//TODO: edge case : if the total number of nodes are never updated, target range for exponential search remains
+				// [0,0]
+				// This means atleast one successful f_i+1 must have been found before a case for making MODE switch could happen
 				q.Reset(env->GetMaxHash());
 				q_f.Reset(env->GetMaxHash());
 				MODE = 1;
@@ -555,7 +559,13 @@ bool IncrementalBGS<state, action>::DoSingleSearchStep()
 	}
 	else{
 		printf("Main iteration is complete\n");
-		printf("MInodesExpanded is %d, MInodesReexpanded is %d, total node expansions %d and total re-expansions is %d \n",MInodesexpanded,MInodesreexpanded,nodesExpanded,nodesReexpanded);
+		printf("The values for number of node expanded are as :\n");
+		printf("MInodesExpanded is %d \n",MInodesexpanded);
+		printf("MInodesReexpanded is %d \n",MInodesreexpanded);
+		printf("Total nodes expanded before the MODE switch is %d \n",nodesExpanded);
+		printf("Total nodes reexpanded before the MODE switch is %d \n",nodesReexpanded);
+		printf("Total nodes expanded %d \n",totalnodesExpanded);
+		printf("Total nodes re-expanded %d \n",totalnodesReexpanded);
 		nodeLB = nodesExpanded;
 		printf("Total nodes lower bound is %d\n",(c1-1)*nodeLB);
 		MInodesexpanded = 0;

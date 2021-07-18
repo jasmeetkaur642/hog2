@@ -34,7 +34,7 @@ std::vector<graphState> path;
 const int kHeuristic = GraphSearchConstants::kTemporaryLabel;
 std::string MyToString(double val);
 
-mode m = kFindPath;
+enum mode m = kFindPath;
 
 bool recording = false;
 bool running = false;
@@ -359,7 +359,7 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
 				}
 				else if (m == kFindPathIbex)
 				{
-					if (ibex.DoSingleSearchStep(path))
+					if (ibex.DoSingleSearchStep())
 						paused = true;
 				}
 				ShowSearchInfo();
