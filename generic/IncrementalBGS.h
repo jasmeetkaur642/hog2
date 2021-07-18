@@ -6,7 +6,9 @@
 //  This code isn't meant for production - just to animate how the algorithm works as a comparison to IDA*.
 //  See (Helmert et al, IJCAI 2019) for details of the algorithm
 //
-
+// This implementation contains working of Algo2 for the efficient BGS. 
+// The search can start from the current f-cost without discarding any nodes in the queue.
+// There is only need to update the budget values correctly.
 #ifndef IncrementalBGS_h
 #define IncrementalBGS_h
 
